@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图表</title>
+    <script src="https://gw.alipayobjects.com/os/antv/assets/f2/3.4.2/f2.min.js"></script>
+    <style>
+        html,body{
+            padding: 0;
+            margin: 0;
+        }
+        .header{
+            position: relative;
+        }
+        .img{
+            width: 100%;
+            height: 185px;
+        }
+        .avatar{
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            top:30px;
+            left: 157.5px;
+            border-radius: 50%;
+            border: sandybrown solid 1px;
+        }
+        .name{
+            position: absolute;
+            font-weight: bold;
+            display: flex;
+            width: 100%;
+            justify-content: center;
+            top:100px;
+            color: #fff;
+        }
+        .time{
+            font-family: 行楷;
+            font-style: italic;
+            position: absolute;
+            top: 130px;
+            color: #fff;
+            display: flex;
+            width: 100%;
+            justify-content: center;
+        }
+        .title{
+            font-size: 22px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: -20px;
+            margin-top: 10px;
+        }
+
+    </style>
+    <script src="https://unpkg.com/dayjs@1.8.28/dayjs.min.js"></script>
+    <script src="https://unpkg.com/dayjs@1.8.28/plugin/utc.js"></script>
+</head>
+<body>
+<div class="header">
+    <img class="img" src="https://source.unsplash.com/random/750x370" alt="">
+    <img id="avatar" class="avatar" src=''/>
+    <div id="name" class="name">@2020</div>
+    <div id="time" class="time"></div>
+<!--    <div class="sentence">运动打卡运动打卡运动打卡运动打卡运动打卡运动打卡运动打卡运动打卡运动打卡</div>-->
+</div>
+<div class="title">运动打卡</div>
+<canvas id="container" width="375" height="240"></canvas>
+<script>
+    dayjs.extend(dayjs_plugin_utc)
+    function getQuery(){
+        const search=location.search.substring(1)
+        const o={}
+        search.split('&').map(s=>{
+            const list=s.split('=')
+            o[list[0]]=decodeURIComponent(list[1])
+        })
+        return o
+    }
+    const query=getQuery()
+    document.getElementById('time').innerText=dayjs().format('DD MMM YYYY')
+    document.getElementById('name').innerText=query.name
+    document.getElementById('avatar').setAttribute('src',query.avatar)
+
+    const todayWeek=dayjs().utcOffset(480).day()
+    const SaturdayNeed=6-todayWeek
+    const latestSaturday=dayjs().utcOffset(480).add(SaturdayNeed,'day').startOf('day')
+    let list=[],data=[]
+    if(query.data){
+        data=JSON.parse(query.data)
+    }
+    const maxDayNum=63
+    const weekNum=Math.ceil(maxDayNum/7)
+    let j=0
+    for(let i=maxDayNum-1;i>=0;i--){
+        const thisDayStart=latestSaturday.subtract(i,'day').startOf('day').valueOf()
+        const thisDayEnd=latestSaturday.subtract(i,'day').endOf('day').valueOf()
+        // if(j==1)console.log(thisDayStart,data[j].timestamp,thisDayEnd)
+        if(j<data.length&&thisDayStart<data[j].timestamp&&thisDayEnd>data[j].timestamp){
+            console.log(j,22,i)
+            list.push({
+                ...data[j],
+                t:dayjs(data[j].timestamp).format('YYYY-MM-DD HH:mm:ss')
+            })
+            j++
+        }else{
+            //当天没打卡
+            const timestamp=latestSaturday.subtract(i,'day').valueOf()
+            const o={
+                timestamp,
+                count:dayjs().valueOf()<timestamp?-1:0,
+            }
+            list.push(o)
+        }
+
+    }
+    // console.log(list,todayWeek,11)
+
+    if(list.length<63){
+        list=new Array(63-list.length).fill({count:0}).concat(list)
+    }
+    const source = [];
+    for (let i = 0; i < list.length; i++) {
+        const obj = {};
+        obj.name = Math.floor(i/7);
+        obj.day = 6-(i%7);
+        obj.count = list[i]?list[i].count:0;
+        source.push(obj);
+    }
+
+    const chart = new F2.Chart({
+        id: 'container',
+        pixelRatio: window.devicePixelRatio
+    });
+    chart.source(source, {
+        name: {
+            type: 'cat',
+            values: new Array(weekNum).fill('').map((str,i)=>{
+                return latestSaturday.subtract(weekNum-i-1,'week').format('MMM')
+            })
+        },
+        day: {
+            type: 'cat',
+            values: [ '六', '五', '四', '三' ,'二','一','日']
+        }
+    });
+
+    chart.polygon()
+        .position('name*day')
+        // .color('count', '#eeeeee-#40c463')
+        .color('count',  value => {
+            if (value== 1) {
+                return '#40c463';
+            }
+            if (value== 0) {
+                return '#eeeeee';
+            }
+
+            return '#ffffff';
+        })
+        .style({
+            lineWidth: 1,
+            stroke: '#fff'
+        });
+    chart.render();
+</script>
+</body>
+</html>

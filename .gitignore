@@ -1,0 +1,6 @@
+/node_modules
+*.wechaty.json
+*.memory-card.json
+/files
+.idea
+config.js
